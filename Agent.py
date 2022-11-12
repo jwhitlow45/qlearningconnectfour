@@ -1,12 +1,13 @@
 import numpy as np
 from keras import Sequential
-from kaggle_environments import Environment
+from kaggle_environments import make
 from ExperienceReplay import Memory, Experience
 from board import is_valid_move, count_empties, BOARD_HEIGHT, BOARD_WIDTH
 
 class Agent: 
-    def __init__(self, env, memory: Memory):
-        self.env = env
+    def __init__(self, memory: Memory):
+        self.maker = make('connectx', debug=True)
+        self.env = self.maker.train([None, 'negamax'])
         self.memory = memory
         self._reset()
         
