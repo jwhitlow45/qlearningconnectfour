@@ -31,6 +31,6 @@ def create_conv2d_model():
     model.add(tfl.LayerNormalization())
     model.add(tfl.Dense(BOARD_WIDTH, activation='linear'))
     
-    model.compile(optimizer='adam')
+    model.compile(optimizer='sgd', loss='mean_squared_error')
     
     return model
