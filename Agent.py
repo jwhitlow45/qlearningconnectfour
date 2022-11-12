@@ -19,7 +19,8 @@ class Agent:
         if np.random.random() < epsilon: # take epsilon move
             action = np.random.choice(BOARD_WIDTH)
             while not is_valid_move(self.state['board'], action):
-                return np.random.choice(range(BOARD_WIDTH))
+                action = np.random.choice(BOARD_WIDTH)
+            return action
             
         # take "intelligent" move
         # make predictions based on baord state
