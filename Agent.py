@@ -2,7 +2,7 @@ import numpy as np
 from keras import Sequential
 from kaggle_environments import Environment
 from ExperienceReplay import Memory, Experience
-from board import isValidMove, countEmpties, BOARD_HEIGHT, BOARD_WIDTH
+from board import is_valid_move, count_empties, BOARD_HEIGHT, BOARD_WIDTH
 
 class Agent: 
     def __init__(self, env, memory: Memory):
@@ -18,7 +18,7 @@ class Agent:
         # get action
         if np.random.random() < epsilon: # take epsilon move
             action = np.random.choice(BOARD_WIDTH)
-            while not isValidMove(self.state['board'], action):
+            while not is_valid_move(self.state['board'], action):
                 return np.random.choice(range(BOARD_WIDTH))
             
         # take "intelligent" move
@@ -33,7 +33,7 @@ class Agent:
         
         # iterate over weighted actions to find best valid move
         for _, action in weighted_actions:
-            if isValidMove(self.state['board'], action):
+            if is_valid_move(self.state['board'], action):
                 return action
         return -1
             
@@ -46,7 +46,7 @@ class Agent:
         # get resulting state and reward from an action
         new_state, reward_multiplier, is_done, _ = self.env.step(action)
         if reward_multiplier is not None:
-            reward = countEmpties(new_state['board']) * reward_multiplier
+            reward = count_empties(new_state['board']) * reward_multiplier
             self.total_reward += reward
         
         # store in agent memory

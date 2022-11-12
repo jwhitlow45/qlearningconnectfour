@@ -4,10 +4,10 @@ BOARD_WIDTH = 7
 BOARD_HEIGHT = 6
 EMPTY = 0
 
-def isValidMove(state: np.array, col: int):
+def is_valid_move(state: np.array, col: int):
     return state[col] == EMPTY
 
-def countEmpties(state):
+def count_empties(state):
     empties = 0
     for value in state:
         if value == EMPTY:
