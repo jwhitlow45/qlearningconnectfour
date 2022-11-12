@@ -2,7 +2,7 @@ import numpy as np
 from keras import Sequential
 from kaggle_environments import Environment
 from ExperienceReplay import Memory, Experience
-from board import isValidMove, BOARD_HEIGHT, BOARD_WIDTH, EMPTY
+from board import isValidMove, countEmpties, BOARD_HEIGHT, BOARD_WIDTH
 
 class Agent: 
     def __init__(self, env, memory: Memory):
@@ -13,14 +13,6 @@ class Agent:
     def _reset(self):
             self.state = self.env.reset()
             self.total_reward = 0
-            
-    def count_empties(self):
-        empties = 0
-        board = self.state['board']
-        for i in range(len(board)):
-            if board[i] == EMPTY:
-                empties += 1
-        return empties
             
     def get_action(self, network: Sequential, epsilon: float):
         # get action
@@ -53,14 +45,14 @@ class Agent:
             
         # get resulting state and reward from an action
         new_state, reward_multiplier, is_done, _ = self.env.step(action)
-        reward = self.count_empties() * reward_multiplier
-        
         if reward_multiplier is not None:
+            reward = countEmpties(new_state['board']) * reward_multiplier
             self.total_reward += reward
         
         # store in agent memory
         experience = Experience(self.state, action, reward, is_done, new_state)
         self.memory.append_memory(experience)
+        self.state = new_state
         
         if is_done:
             final_reward = self.total_reward
