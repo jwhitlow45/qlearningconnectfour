@@ -2,7 +2,7 @@ import numpy as np
 from collections import deque
 
 class Experience:
-    def __init__(self, state: np.array, action: int, reward: int, done: bool, next_state: np.array) -> None:
+    def __init__(self, state, action: int, reward: int, done: bool, next_state: np.array) -> None:
         self.state = state
         self.action = action
         self.reward = reward
