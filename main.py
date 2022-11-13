@@ -15,19 +15,24 @@ primary_net: tf.keras.Sequential = Networks.create_conv2d_model()
 def main():
     global primary_net, target_net
     
+    print('=======================================================================')
+    print(tf.config.list_physical_devices('GPU'))
+    print('=======================================================================')
+    
     # SAVE PARAMETERS
     SAVE_FREQ = 1000
+    RENDER_FREQ = 500
     RENDER_ENV = make('connectx', debug=True)
             
     # HYPERPARAMETERS
     GAMMA = 0.99
-    BATCH_SIZE = 16         
-    REPLAY_SIZE = 100     
+    BATCH_SIZE = 32    
+    REPLAY_SIZE = 10000
     LEARNING_RATE = 1E-4
     OPTIMIZER = tf.optimizers.SGD(LEARNING_RATE)          
-    SYNC_TARGET_FRAMES = 10
-    REPLAY_START_SIZE = 100
-    EPS_DECAY = .9987
+    SYNC_TARGET_FRAMES = 1000
+    REPLAY_START_SIZE = 1000
+    EPS_DECAY = .999985
     EPS_MIN = 0.02
 
     # persistent parameters
@@ -49,6 +54,14 @@ def main():
             with open(f'./stats/stats-{frames}.csv', 'w') as FILE:
                 FILE.write(output)
                 output = ''
+        
+        if frames % RENDER_FREQ == 0:
+            # render game from model
+            RENDER_ENV.reset()
+            RENDER_ENV.run([functional_agent, 'negamax'])
+            game_render = RENDER_ENV.render(mode='html')
+            with open(f'./models/render-{len(total_rewards)}-{frames}.html', 'w') as FILE:
+                FILE.write(game_render)
         
         if reward is not None:
             total_rewards.append(reward)
