@@ -43,7 +43,6 @@ class Agent:
         action = self.get_action(network, epsilon)
         reward = None
         final_reward = None
-        epsilon = 0
             
         # get resulting state and reward from an action
         new_state, reward_multiplier, is_done, _ = self.env.step(action)
@@ -58,5 +57,13 @@ class Agent:
         
         if is_done:
             final_reward = self.total_reward
+            agents = None
+            if np.random.random() < epsilon:
+                agents = [None, 'random']
+                print('next opponent is random')
+            else:
+                agents = [None, 'negamax']
+                print('next opponent is negamax')
+            self.env = self.maker.train(agents)
             self._reset()
         return final_reward
