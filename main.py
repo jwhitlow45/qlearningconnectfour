@@ -21,13 +21,13 @@ def main():
             
     # HYPERPARAMETERS
     GAMMA = 0.99
-    BATCH_SIZE = 32                 
-    REPLAY_SIZE = 10000             
+    BATCH_SIZE = 16         
+    REPLAY_SIZE = 100     
     LEARNING_RATE = 1E-4
     OPTIMIZER = tf.optimizers.SGD(LEARNING_RATE)          
-    SYNC_TARGET_FRAMES = 10        
-    REPLAY_START_SIZE = 10000      
-    EPS_DECAY = .999985
+    SYNC_TARGET_FRAMES = 10
+    REPLAY_START_SIZE = 100
+    EPS_DECAY = .9987
     EPS_MIN = 0.02
 
     # persistent parameters
