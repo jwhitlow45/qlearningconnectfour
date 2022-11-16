@@ -19,3 +19,4 @@ venv.bak/
 *.html
 models/
 stats/
+old/

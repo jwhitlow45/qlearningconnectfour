@@ -47,7 +47,7 @@ class Agent:
         # get resulting state and reward from an action
         new_state, reward_multiplier, is_done, _ = self.env.step(action)
         if reward_multiplier is not None:
-            reward = count_empties(new_state['board']) * reward_multiplier
+            reward = count_empties(new_state['board']) * reward_multiplier * 1000
             self.total_reward += reward
         
         # store in agent memory
@@ -57,13 +57,13 @@ class Agent:
         
         if is_done:
             final_reward = self.total_reward
-            agents = None
-            if np.random.random() < epsilon:
-                agents = [None, 'random']
-                print('next opponent is random')
-            else:
-                agents = [None, 'negamax']
-                print('next opponent is negamax')
-            self.env = self.maker.train(agents)
+            # agents = None
+            # if np.random.random() < epsilon:
+            #     agents = [None, 'random']
+            #     print('next opponent is random')
+            # else:
+            #     agents = [None, 'negamax']
+            #     print('next opponent is negamax')
+            # self.env = self.maker.train(agents)
             self._reset()
         return final_reward

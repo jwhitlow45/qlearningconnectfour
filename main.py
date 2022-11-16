@@ -3,6 +3,7 @@ import tensorflow as tf
 from keras import models
 import numpy as np
 from kaggle_environments import make
+import gc
 
 import Networks
 from Agent import Agent
@@ -11,6 +12,7 @@ from board import BOARD_HEIGHT, BOARD_WIDTH, is_valid_move
 # networks
 target_net: tf.keras.Sequential = Networks.create_conv2d_model()
 primary_net: tf.keras.Sequential = Networks.create_conv2d_model()
+target_net.set_weights(primary_net.get_weights())
 
 def main():
     global primary_net, target_net
@@ -26,9 +28,9 @@ def main():
             
     # HYPERPARAMETERS
     GAMMA = 0.99
-    BATCH_SIZE = 32    
+    BATCH_SIZE = 256    
     REPLAY_SIZE = 10000
-    LEARNING_RATE = 1E-4
+    LEARNING_RATE = .1
     OPTIMIZER = tf.optimizers.SGD(LEARNING_RATE)          
     SYNC_TARGET_FRAMES = 1000
     REPLAY_START_SIZE = 1000
@@ -54,21 +56,24 @@ def main():
             with open(f'./stats/stats-{frames}.csv', 'w') as FILE:
                 FILE.write(output)
                 output = ''
+            models.save_model(primary_net, f'./models/dqn-{len(total_rewards)}-{frames}.h5')
+            
         
         if frames % RENDER_FREQ == 0:
             # render game from model
-            RENDER_ENV.reset()
-            RENDER_ENV.run([functional_agent, 'negamax'])
-            game_render = RENDER_ENV.render(mode='html')
-            with open(f'./models/render-{len(total_rewards)}-{frames}.html', 'w') as FILE:
-                FILE.write(game_render)
+            for cur_agent in ['random', 'negamax']:
+                RENDER_ENV.reset()
+                RENDER_ENV.run([functional_agent, cur_agent])
+                game_render = RENDER_ENV.render(mode='html')
+                with open(f'./models/render-{cur_agent}-{len(total_rewards)}-{frames}.html', 'w') as FILE:
+                    FILE.write(game_render)
         
         if reward is not None:
             total_rewards.append(reward)
             mean_reward = np.mean(total_rewards[-100:])
             print(f'{frames}: {len(total_rewards)} games, mean reward {mean_reward}, epsilon {epsilon}')
             output += f'{frames},{len(total_rewards)},{mean_reward},{epsilon}\n'
-        
+            
             # save model when best reward is improved
             if best_mean_reward is None or best_mean_reward < mean_reward:
                 models.save_model(primary_net, f'./models/dqn-{len(total_rewards)}-{frames}-best.h5')
@@ -77,11 +82,12 @@ def main():
                     print(f"Best mean reward updated: {best_mean_reward}")
                 
                 # render game from model
-                RENDER_ENV.reset()
-                RENDER_ENV.run([functional_agent, 'negamax'])
-                game_render = RENDER_ENV.render(mode='html')
-                with open(f'./models/render-{len(total_rewards)}.html', 'w') as FILE:
-                    FILE.write(game_render)
+                for cur_agent in ['random', 'negamax']:
+                    RENDER_ENV.reset()
+                    RENDER_ENV.run([functional_agent, cur_agent])
+                    game_render = RENDER_ENV.render(mode='html')
+                    with open(f'./models/render-{cur_agent}-{len(total_rewards)}-best.html', 'w') as FILE:
+                        FILE.write(game_render)
                     
                 
         # # wait for memory to fill up before learning
@@ -124,7 +130,9 @@ def main():
             # use loss to adjust gradients
             gradients = tape.gradient(loss, primary_net.trainable_variables)
             OPTIMIZER.apply_gradients(zip(gradients, primary_net.trainable_variables))
-                
+            
+            garbage_collection()
+            
             if frames % SYNC_TARGET_FRAMES == 0:
                 target_net.set_weights(primary_net.get_weights())
 
@@ -146,6 +154,10 @@ def functional_agent(observation, config):
         if is_valid_move(flat_board, action):
             return action
     return -1
+
+def garbage_collection():
+    gc.collect()
+    tf.keras.backend.clear_session()
     
 if __name__ == '__main__':
     main()
