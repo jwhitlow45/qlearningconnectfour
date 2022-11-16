@@ -48,7 +48,7 @@ class Agent:
         # get resulting state and reward from an action
         new_state, reward_multiplier, is_done, _ = self.env.step(action)
         if reward_multiplier is not None:
-            reward = count_empties(new_state['board']) * reward_multiplier * 1000
+            reward = count_empties(new_state['board']) * reward_multiplier
             self.total_reward += reward
         
         # store in agent memory
