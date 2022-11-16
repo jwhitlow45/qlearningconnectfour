@@ -10,8 +10,8 @@ from Agent import Agent
 from board import BOARD_HEIGHT, BOARD_WIDTH, is_valid_move
 
 # networks
-target_net: tf.keras.Sequential = Networks.create_conv2d_model()
 primary_net: tf.keras.Sequential = Networks.create_conv2d_model()
+target_net: tf.keras.Sequential = Networks.create_conv2d_model()
 target_net.set_weights(primary_net.get_weights())
 
 def main():
@@ -28,14 +28,18 @@ def main():
             
     # HYPERPARAMETERS
     GAMMA = 0.99
-    BATCH_SIZE = 256    
+    BATCH_SIZE = 32
     REPLAY_SIZE = 10000
-    LEARNING_RATE = .1
+    LEARNING_RATE = .0001
     OPTIMIZER = tf.optimizers.SGD(LEARNING_RATE)          
     SYNC_TARGET_FRAMES = 1000
     REPLAY_START_SIZE = 1000
     EPS_DECAY = .999985
     EPS_MIN = 0.02
+    
+    # TOGGLES
+    ENABLE_RENDER = False
+    ENABLE_SAVE = False
 
     # persistent parameters
     memory = Memory(REPLAY_SIZE)
@@ -52,14 +56,14 @@ def main():
         epsilon = max(epsilon*EPS_DECAY, EPS_MIN)
         reward = agent.step_forward(primary_net, epsilon)
         
-        if frames % SAVE_FREQ == 0:
+        if frames % SAVE_FREQ == 0 and ENABLE_SAVE:
             with open(f'./stats/stats-{frames}.csv', 'w') as FILE:
                 FILE.write(output)
                 output = ''
             models.save_model(primary_net, f'./models/dqn-{len(total_rewards)}-{frames}.h5')
             
         
-        if frames % RENDER_FREQ == 0:
+        if frames % RENDER_FREQ == 0 and ENABLE_RENDER:
             # render game from model
             for cur_agent in ['random', 'negamax']:
                 RENDER_ENV.reset()
@@ -94,47 +98,37 @@ def main():
         if len(memory) < REPLAY_START_SIZE:
                     continue
         
-        with tf.GradientTape() as tape:
-            # get batch of data from memory (experience replay)
-            batch = agent.memory.sample(BATCH_SIZE)
-            states, actions, rewards, dones, next_states = batch
-            
-            # convert action, reward, and done_mask lists to torch tensors
-            actions_v = tf.convert_to_tensor(actions)
-            rewards_v = tf.convert_to_tensor(rewards, dtype='float32')
-            done_mask = tf.convert_to_tensor(dones)
-            
-            # reshape states to fit into model input
-            states = np.array(states).reshape((-1, BOARD_HEIGHT, BOARD_WIDTH))
-            next_states = np.array(next_states).reshape((-1, BOARD_HEIGHT, BOARD_WIDTH))
-            
-            # predict states using q and q'
-            preds = primary_net(states)
-            next_preds = target_net(next_states)
-            
-            # get q values for given actions from q prediction
-            state_action_values = tf.gather(preds, actions_v, batch_dims=1, axis=1)
-            # get max value of q' prediction
-            next_state_values = tf.reduce_max(next_preds, axis=1)
-            # apply done mask to set states which do not have a next state to 0 reward (end of game has no next state)
-            next_state_values = tf.where(done_mask, next_state_values, tf.zeros((1)))
-            # detach to prevent q' from being optimized by sgd
-            next_state_values = tf.stop_gradient(next_state_values)
-            
-            # bellman approximation
-            expected_state_action_values = tf.add_n(tf.scalar_mul(GAMMA, next_state_values), rewards_v)
-            
-            # calculate loss using bellman approximation
-            loss = tf.losses.MSE(expected_state_action_values, state_action_values)
+        # get batch of data from memory (experience replay)
+        batch = agent.memory.sample(BATCH_SIZE)
+        states, actions, rewards, dones, next_states = batch
 
-            # use loss to adjust gradients
-            gradients = tape.gradient(loss, primary_net.trainable_variables)
-            OPTIMIZER.apply_gradients(zip(gradients, primary_net.trainable_variables))
+        for state, action, reward, done, next_state in zip(states, actions, rewards, dones, next_states):
+            with tf.GradientTape() as tape:
+                if not done:
+                    reward = 0
+                # get best predicted action from target network
+                next_state = np.array(next_state).reshape((-1, BOARD_HEIGHT, BOARD_WIDTH))
+                target_pred = target_net(next_state).numpy().tolist()[0]
+                action_prime = target_pred.index(max(target_pred))
+                
+                # calculate q*
+                primary_future_pred = tf.gather(primary_net(next_state), tf.convert_to_tensor(action_prime), axis=1)
+                q_star = tf.math.add(tf.scalar_mul(GAMMA, primary_future_pred), reward)
+
+                # calulate q(s,a)
+                state = np.array(state).reshape((-1, BOARD_HEIGHT, BOARD_WIDTH))
+                q_theta = tf.gather(primary_net(state), tf.convert_to_tensor(action), axis=1)
+
+                # calculate loss                
+                loss = tf.square(tf.subtract(q_star, q_theta))
+                # use loss to adjust gradients
+                gradients = tape.gradient(loss, primary_net.trainable_variables)
+                OPTIMIZER.apply_gradients(zip(gradients, primary_net.trainable_variables))
             
-            garbage_collection()
-            
-            if frames % SYNC_TARGET_FRAMES == 0:
-                target_net.set_weights(primary_net.get_weights())
+        garbage_collection()
+        
+        if frames % SYNC_TARGET_FRAMES == 0:
+            target_net.set_weights(primary_net.get_weights())
 
 # functional agent for rendering games without epsilon decay
 def functional_agent(observation, config):

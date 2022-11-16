@@ -7,7 +7,7 @@ from board import is_valid_move, count_empties, BOARD_HEIGHT, BOARD_WIDTH
 class Agent: 
     def __init__(self, memory: Memory):
         self.maker = make('connectx', debug=True)
-        self.env = self.maker.train([None, 'negamax'])
+        self.env = self.maker.train([None, 'random'])
         self.memory = memory
         self._reset()
         
@@ -32,6 +32,7 @@ class Agent:
         # turn into weighted actinos and sort based on weight
         weighted_actions = [(weights[i], i) for i in range(len(weights))]
         weighted_actions.sort(key=lambda x: x[0], reverse=True)
+        print(weighted_actions)
         
         # iterate over weighted actions to find best valid move
         for _, action in weighted_actions:
